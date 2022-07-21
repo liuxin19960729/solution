@@ -228,14 +228,6 @@ Class=ClassLoader+Class
 
 ### 破坏双亲委派模型
 ```
-JNDI SPI  java name and directory interface
-名字发现和查找数据的对象,这些对象存储在不同的命名和目录服务中
-  远程调用（Remote invocation）
-  LDAP Lighweight Directory Access protocal 轻量目录访问协议
-  DNS  Domain Name Service
-  CORBA Common Object Broker(代理) Artecture 通用对象代理架构
-
-  
 ```
 
 ## JVM 配置参数
@@ -243,4 +235,58 @@ JNDI SPI  java name and directory interface
 -Xbootclasspath=xxx  指明BootStrapClassLoader 加载的地址
 -XX:+TraceClassLading 跟踪类加载
 
+```
+
+## UrlClassLoader简单使用
+```
+        URL url = new URL("");
+        URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{url});
+        urlClassLoader.loadClass()
+
+
+note:  / 结尾表示目录
+       否则表示jar包        
+
+```
+
+## 上下文加载器
+```
+main 线程的加载器是 main() 方法加载的加载器
+
+```
+
+## 将类夹杂器作为 命名空间
+```
+package+classname 全路径类名
+
+但是仍然存在 报名和类名同名的类,使用不同的ClassLoader加载，这样就能区分出同包名 和类名的类
+
+```
+## 创建自己的加载器
+```java
+extends ClassLoader 
+
+override findClass() 方法
+
+loadClass() 实现的逻辑 让 parent先找  找不到在调用字节的findClass()
+
+
+
+
+class CusClassLoader extends ClassLoader{
+    @Override
+    protected Class<?> findClass(String name) throws ClassNotFoundException {
+        //实现逻辑 
+        //读取class 数据 将数据放入到  defineClass()
+        return super.defineClass("".getBytes());
+    }
+}
+
+
+
+```
+## API
+```
+static ClassLoader getSystemClassLoader() 
+   在加第一个应用类的加载器
 ```
