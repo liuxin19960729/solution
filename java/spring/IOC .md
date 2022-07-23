@@ -249,7 +249,7 @@ public void setA(Properties a)
 
 
 
-对父容器Bean的使用
+检查Bean 是否存在 并且把beanNam额注入到方法
 	public void setA(String a) {
 		this.a = a;
 	}
@@ -257,6 +257,8 @@ public void setA(Properties a)
              <idref bean="A"></idref>
 		</property>
     idref 只注入名称,并且还会检查bean是否存在
+
+对父容器Bean的使用
 
 <ref parent="" bean=""></ref> 对父容器bean的引用
 
@@ -273,5 +275,239 @@ Property内部的Bean
 ```
 #### 注入集合类的使用
 ```java
+<props>
+    <prop key="" value="">
+</props>
+<list>....</list>
+
+<map>
+  <entry key="" value="">
+</map>
+
+<set>.....</set>
+
+set list prop map 的value可以是下面的任何值
+bean | ref | idref | list | set | map | props | value | null
+
+```
+
+#### 合并集合 
+```
+ <bean id="parent" abstract="true" class="example.ComplexObject">
+        <property name="adminEmails">
+            <props>
+                <prop key="administrator">administrator@example.com</prop>
+                <prop key="support">support@example.com</prop>
+            </props>
+        </property>
+    </bean>
+
+ <bean id="child" parent="parent">
+        <property name="adminEmails">
+            <!-- the merge is specified on the child collection definition -->
+            <props merge="true">
+                <prop key="sales">sales@example.com</prop>
+                <prop key="support">support@example.co.uk</prop>
+            </props>
+        </property>
+    </bean>
+<beans>
+
+要想对Properties值进行合并使用 <props merge="true">
+
+list  map set 一样的能够支持合并操作
+
+note: 合并只能是同类之间合并
+
+```
+
+### null 和空字符串
+```
+<bean class="ExampleBean">
+    <property name="email" value=""/>
+</bean>
+相当于 setEmail("")
+
+
+<bean class="ExampleBean">
+    <property name="email">
+        <null/>
+    </property>
+</bean>
+
+相等于 setEmail(null)
+```
+
+### P空间xml
+```
+p:a="" 值  p:a-ref 引用
+xmlns:p="http://www.springframework.org/schema/p"
+p空间不存在XSD文件
+基于spring核心中
+
+p:class属性名
+p:class属性名-ref
+
+spring-bean：META-INF/spring.handles 里面设置了专门处理对应的命名空间属性 和元素的处理方式
+
+p空间缺点 p:xxx-ref 可能会造成xx-ref 的属性名冲突
+
+```
+
+### c空间的xml
+```
+和p空间的使用方法相同,c空间主要用意 constructor
+xmlns:c="http://www.springframework.org/schema/c"
+
+c:thingThree-ref="beanThree" c:email="something@somewhere.com"/>
+
+c空间index方式设置
+
+c:_index=""
+c:_index-ref=""
+```
+
+### 复合属性名称
+```
+ <property name="fred.bob.sammy" value="123" />
+ . 进行隔离  同时对 fred bob 和sammy 进行设置值
+```
+
+### depend-on
+```
+在使用Bean之前 依赖项必须初始化完
+depend-on=""  ,; whiteplace 区分开多个依赖项
+
+
+
+<bean id="beanOne" class="ExampleBean" depends-on="manager,accountDao">
+    <property name="manager" ref="manager" />
+</bean>
+
+<bean id="manager" class="ManagerBean" />
+<bean id="accountDao" class="x.y.jdbc.JdbcAccountDao" /
+
+
+注意 : 初始化依赖性允许,关闭填也是遵循依赖的原则
+```
+### lazt-init
+```
+lazy-init
+getBean() 时才会创建Bean
+
+note:非延迟依赖延迟Bean 在 refresh() 延迟也会被创建
+```
+**beans级别的延迟属性设置default-lazy-init="true"**
+
+
+### 自动装配者(AutoWire) Xml
+```
+spring可以自动装配协作spring之间的关系
+
+作用:向该类添加依赖项,可以自动满足依赖无需配置
+
+
+四种模式
+
+no(default): 不会自动装配必须显示的设置。(property 和 constrcut-args)
+
+byName:
+   spring通过虚造setter方法  找到属性名,那这属性名 到容器里面进行 早对应的BeanName 
+
+
+byType:找到Setter方法  旋凿到属性类型 查看是否存在相同的类的Bean,当存在多个时会抛出异常,一个或没有则不会抛出异常
+
+constructor:选中和构造参数匹配的类型
+
+```
+### 自动装配缺点
+```
+constructor 和 byType
+
+1.不能装配简单属性:String Class 数组 等
+
+autowire-candidate =false放弃该类为自动装配属性(default true)
+primary 自动装配的主要候选者
+```
+### 方法注入
+```
+
+lookup-method:用于工厂方法
+
+	<bean id="lup" class="com.liuxin.entity.lookup.Lup" ></bean>
+	<bean id="ss" class="com.liuxin.entity.lookup.AbstractLUP">
+		<lookup-method bean="lup" name="aa"></lookup-method>
+	</bean>
+createCommand 方法是abstract 动态生成的子类会生成子类的实现方法,
+非abstract 动态生成的代码会覆盖实现
+
+lookup-method bean是返回的对象(scope=singleton or propertype)
+aa ：ss对象的方法  该方法返回的是 lupBedefinition instance后的对象 可单例 或 工厂
+
+
+原理 调用 aa()方法的时候 从BeanDefinition 找到 对应lookup-method 相关配置 在BeanFactory 该创建 换货从singeltonMap 里面拿取
+
+
+
+replace-method
+ 将方法替换成另一个实现
+
+```
+## Bean Scope
+```
+singleton
+
+
+
+prototype  java new的替代品
+
+request  每个请求都有自己的生命周期,只在Web感知的Spring上下文中有效(限制于单个Http请求生命周期)
+   @RequestScope
+   当这个Http request请求 完成是 bean会丢弃
+
+
+session Http的生命周期
+   <bean id="userPreferences" class="com.something.UserPreferences" scope="session"/>
+    @SessionScope
+    bean 有效的限制在Http级别,可以对不同的Http相互隔离
+    
+
+application 将单个Bean定义为ServeletConext
+  <bean id="appPreferences" class="com.something.AppPreferences" scope="application"/>
+  @ApplicationScope
+  
+  为整个ServletContext(web) 项目使用
+
+websocket
+
+
+note
+property bean  依赖  singleton bean 
+ 先创建obj 在 把单例的bean注入
+
+```
+
+### 作用域和Bean的依赖
+```
+短生命周期的Bean注入到更长周期的Bean中,使用AOP来替代这个Bean的范围
+  注入一个代理对象
+  将真实的对象通过委托的方式传给真实对象
+
+
+ <bean id="userPreferences" class="com.something.UserPreferences" scope="session">
+        <!-- instructs the container to proxy the surrounding bean -->
+        <aop:scoped-proxy/> 
+    </bean>
+
+
+注入Bean的代理对象
+<bean id="userService" class="com.something.SimpleUserService">
+        <!-- a reference to the proxied userPreferences bean -->
+        <property name="userPreferences" ref="userPreferences"/>
+    </bean>  
+
+ <aop:scoped-proxy/> 会创建一个singleton的代理对象, session 对象会生成一个委托的对象
+ 通过调用会通过代理对象 遭到委托对象调用相对应的方法
+
 
 ```
