@@ -34,9 +34,16 @@ sudo yum remove docker \
           例 
              docker-ce.x86_64  3:18.[09.0-3].el7  [] 之间的类容就是版本号  
              docker-ce-18.09.0
+
+
+    版本更新 重新选择一个版本进行安装         
 2.rpm 包安装完全手动进行升级,在不能上网的系统重安装非常有用
+  1.下载rpm 包
+     https://download.docker.com/linux/centos/
+  2.sudo yum install /path/to/package.rpm
 
 3.在测试和开发环境中,很多用户喜欢方便的脚本安装
-
+  curl -fsSL https://get.docker.com -o get-docker.sh
+   DRY_RUN=1 sh ./get-docker.sh
 
 ```

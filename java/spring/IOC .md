@@ -1107,4 +1107,61 @@ sources.addFirst(new MyPropertySource());
 
 
 
+<beans>
+    <import resource="com/bank/service/${customer}-config.xml"/>
+</beans>
+```
+
+### 注册 LoadTimeWeaver
+```
+@Configuration
+@EnableLoadTimeWeaving
+public class AppConfig {
+}
+
+
+<beans>
+    <context:load-time-weaver/>
+</beans>
+```
+
+### 国际化MessageSources
+```
+<beans>
+    <bean id="messageSource"
+            class="org.springframework.context.support.ResourceBundleMessageSource">
+        <property name="basenames">
+            <list>
+                <value>format</value>
+                <value>exceptions</value>
+                <value>windows</value>
+            </list>
+        </property>
+    </bean>
+</beans>
+
+   
+ # in format.properties 
+    message=鳄鱼摇滚！
+
+    # in exceptions.properties 
+    argument.required={0} 参数是必需的。
+
+```
+### 定义标准的事件
+```
+ContextRefreshedEvent refresh事件触发 虽有Bean都加载实例化完成
+
+
+ContextStartedEvent Application启动的时候发布  start()
+
+
+ContextClosedEvent  stop方法调用
+
+
+RequestHandledEvent  告诉所有的bean 已经收到 http的请求
+
+ServletRequestHandledEvent  子类添加 Servlet上下文
+
+
 ```
