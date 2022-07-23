@@ -489,7 +489,7 @@ property bean  依赖  singleton bean
 
 ### 作用域和Bean的依赖
 ```
-短生命周期的Bean注入到更长周期的Bean中,使用AOP来替代这个Bean的范围
+短生命周期的Bean注入到更长周期的Bean中(容器实例化一次,只在实例化的时候注入,所以会出问题),使用AOP来替代这个Bean的范围
   注入一个代理对象
   将真实的对象通过委托的方式传给真实对象
 
@@ -507,7 +507,604 @@ property bean  依赖  singleton bean
     </bean>  
 
  <aop:scoped-proxy/> 会创建一个singleton的代理对象, session 对象会生成一个委托的对象
- 通过调用会通过代理对象 遭到委托对象调用相对应的方法
+ 通过调用会通过代理对象 遭到委托对象调用相对应的方法(委托到代理对象检索到真正的对象)
+
+session 和  request时候会使用下面的<aop:scope-proxy创建>
+
+
+note:默认情况下是基于GCLIB做代理的
+```
+
+## 生命周期回调
+```
+init-method和destroy-method
+
+Lifecycle 接口的实现  参与容器自生启动和关闭过程
+
+org.springframework.beans.factory.InitializingBean spring官方建议不要使用该接口
+ void afterPropertiesSet() throws Exception;
+        init-method ： 创建之后 填充完属性 执行 init方法
+
+
+spring官方建议使用 
+  @PostConstruct 或 POJO 方法
+
+
+
+destory
+org.springframework.beans.factory.DisposableBean 不建议将Bean和spring进行耦合
+void destroy() throws Exception;
+
+建议使用的方式
+@PreDestroy
+
+```
+
+### 默认初始化和销毁
+```
+<beans default-init-method="init"> 给每个bean设置默认的init
+default-destroy-method
+当Bean存在这些命名的方发出才会调用
+
+
+当设置了默认的初始化 或销毁的方法  然而一些Bean 上设置了其他的方法初始化方法明层
+
+init-method  desrory-method 覆盖默认初始化属性
+
+
+
+```
+
+### LifeCycle
+```
+public interface LifecycleProcessor extends Lifecycle {
+
+    void onRefresh();
+
+    void onClose();
+}
+
+控制着这些LifeCycle的执
+
+
+org.springframework.context.SmartLifecycle 对Bean的自动启动和细粒度控制
+
+
+close也是存在依赖关系的
+public interface Phased {
+
+    int getPhase(); //执行顺序执行 关闭是反着执行 先开启的后执行
+}
+
+public interface SmartLifecycle extends Lifecycle, Phased {
+
+    boolean isAutoStartup(); //是否自动启动
+
+    void stop(Runnable callback);
+}
+
+
+DefaultLifecycleProcessor   timeoutPerShutdownPhase  每个阶段独享的超时值
+
+```
+### 非Web 环境下优雅的关闭
+```
+  ctx.registerShutdownHook();,保证正常关闭 程序 会释放Bean里面资源
+```
+### Bean 的 parent 属性
+```
+<bean id ="parent">
+
+<bean id="child" parent="parent">
+
+child 继承 parent 
+属性继承
+child不想要parent的属性 也能通过 override来重新设置
+
+可以继承的属性   构造函数参数值、属性值和方法覆盖  初始化方法、销毁方法或static工厂方法
+不可自定一的属性 depend-on  autowire  init-lazy 
+
+
+如果不存在 class 属性 设置 abstract 是必须的,定义为 abstract是当做纯模版使用
+<bean id="inheritedTestBeanWithoutClass" abstract="true">
+    <property name="name" value="parent"/>
+    <property name="age" value="1"/>
+</bean>
+```
+
+### xml和注释混合使用
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+        https://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        https://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:annotation-config/>
+
+</beans>
+
+隐式的注册了下面三个BeanFactoryProcessor
+
+ConfigurationClassPostProcessor
+
+AutowiredAnnotationBeanPostProcessor
+
+CommonAnnotationBeanPostProcessor
+
+PersistenceAnnotationBeanPostProcessor
+
+EventListenerMethodProcessor
+
+```
+### @Required
+```
+setter 自动装配
+public class SimpleMovieLister {
+
+    private MovieFinder movieFinder;
+
+    @Required
+    public void setMovieFinder(MovieFinder movieFinder) {
+        this.movieFinder = movieFinder;
+    }
+
+    // ...
+}
+
+RequiredAnnotationBeanPostProcessor 注册为 bean 以启用对@Required注解的支持
+
+```
+### @AutoWired
+```
+1.@AutoWired 制定对其那一个构造参数使用其进行装配
+
+2.@AutoWired 用于其传统setter的填充
+
+3.也能用于属性字段的填充
+@Autowired
+private MovieCatalog movieCatalog;
+
+4.将所有匹配的的类型全部添加到数组上
+@Autowired
+private MovieCatalog[] movieCatalogs;
+
+or
+public class MovieRecommender {
+
+    private Set<MovieCatalog> movieCatalogs;
+
+    @Autowired
+    public void setMovieCatalogs(Set<MovieCatalog> movieCatalogs) {
+        this.movieCatalogs = movieCatalogs;
+    }
+
+    // ...
+
+
+}'
+
+key beanname
+value bean
+   @Autowired
+    public void setMovieCatalogs(Map<String, MovieCatalog> movieCatalogs) {
+        this.movieCatalogs = movieCatalogs;
+    }
+
+默认情况下是将@Autowire 注入为依赖项  当@Autowire(required=false)  当没有匹配的时候会跳过
+
+当多个构造函数使用Autowire时 可以视同 @Autowire(required=false) 
+  1.不能满足要求 默认无参构造
+  2.满足要求那个满足要求使用那个
+
+```
+### @Primary
+```
+Primary指示当多个 bean 是自动装配到单值依赖项的候选对象时，应该优先考虑特定的 bean
+
+例:
+@Configuration
+public class MovieConfiguration {
+
+    @Bean
+    @Primary
+    public MovieCatalog firstMovieCatalog() { ... }
+
+    @Bean
+    public MovieCatalog secondMovieCatalog() { ... }
+
+    // ...
+}
+
+or
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+        https://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        https://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:annotation-config/>
+
+    <bean class="example.SimpleMovieCatalog" primary="true">
+        <!-- inject any dependencies required by this bean -->
+    </bean>
+
+    <bean class="example.SimpleMovieCatalog">
+        <!-- inject any dependencies required by this bean -->
+    </bean>
+
+    <bean id="movieRecommender" class="example.MovieRecommender"/>
+
+</beans>
+
+```
+
+### @Qualifier
+```
+  缩小范围
+   @Autowired
+    @Qualifier("main")
+    private MovieCatalog movieCatalog;
+
+ @Autowired
+    public void prepare(@Qualifier("main") MovieCatalog movieCatalog,
+            CustomerPreferenceDao customerPreferenceDao) {
+        this.movieCatalog = movieCatalog;
+        this.customerPreferenceDao = customerPreferenceDao;
+    }
+```
+
+### 构建自定义注释自动匹配
+```
+@Target({ElementType.FIELD, ElementType.PARAMETER})
+@Retention(RetentionPolicy.RUNTIME)
+@Qualifier
+public @interface Genre {
+
+    String value();
+}
+
+  <bean class="example.SimpleMovieCatalog">
+        <qualifier type="example.Genre" value="Comedy"/> //可以设置Qulifier的类型
+        <!-- inject any dependencies required by this bean -->
+    </bean>
+
+```
+
+### 泛型类型作为隐式形式
+```
+@Configuration
+public class MyConfiguration {
+
+    @Bean
+    public StringStore stringStore() {//Store<String>
+        return new StringStore();
+    }
+
+    @Bean
+    public IntegerStore integerStore() {//Store<Interger>
+        return new IntegerStore();
+    }
+}
+
+@Autowired
+private Store<String> s1; // <String> qualifier, injects the stringStore bean
+
+@Autowired
+private Store<Integer> s2;
+
+
+@Autowired
+private List<Store<Integer>> s; 注入所有实现 Store<Integer>的泛型
+```
+
+### CustonmAutowireConfigure 自定义自动注入类型
+```
+是一个 BeanFactoryPostProcessor 允许您注册自己的自定义限定符注解类型,即使没有使用@Qulifer
+
+<bean id="customAutowireConfigurer"
+        class="org.springframework.beans.factory.annotation.CustomAutowireConfigurer">
+    <property name="customQualifierTypes">
+        <set>
+            <value>example.CustomQualifier</value> //自定义限定符类型类全路径
+        </set>
+    </property>
+</bean>
+
+```
+
+### Resource
+```
+public class SimpleMovieLister {
+
+    private MovieFinder movieFinder;
+
+    @Resource(name="myMovieFinder") 
+    public void setMovieFinder(MovieFinder movieFinder) {
+        this.movieFinder = movieFinder;
+    }
+}
+
+@Resource(name="myMovieFinder")  没有指定名称采用字段名称
+
+
+
+```
+### @使用@Value
+```
+@Component
+public class MovieRecommender {
+
+    private final String catalog;
+
+    public MovieRecommender(@Value("${catalog.name}") String catalog) {
+        this.catalog = catalog;
+    }
+}
+
+@Configuration
+@PropertySource("classpath:application.properties");//配置地址
+public class AppConfig { }
+
+@Value("${catalog.name}" 获取对应的属性值
+
+
+spring提供嵌入式解析器是比较宽松的
+
+    //设置一个严格不存在的值
+    @Bean
+    public static PropertySourcesPlaceholderConfigurer propertyPlaceholderConfigurer() {
+        return new PropertySourcesPlaceholderConfigurer();
+    }
+
+note:	配置PropertySourcesPlaceholderConfigurer使用 JavaConfig 时， @Bean方法必须是static.
+
+SpringBoot 默认配置
+   pring Boot 默认配置一个PropertySourcesPlaceholderConfigurerbean，该 bean 将从application.properties和application.yml文件中获取属性。
+
+```
+
+### 路径扫描组件
+```
+@Component spring管理的通用组件
+
+@Repository  Dao
+@Service,  Service
+@Controller Controller
+
+
+@ComponentScan(basePackages = "org.example") 扫表包下的这些组件
+<context:component-scan base-package="org.example"/>
+
+
+当您使用 component-scan 元素时， AutowiredAnnotationBeanPostProcessorand CommonAnnotationBeanPostProcessor都被隐式包含在内。这意味着这两个组件会被自动检测并连接在一起——所有这些都不需要 XML 中提供任何 bean 配置元数据。
+
+
+扫描过滤
+@Configuration
+@ComponentScan(basePackages = "org.example",
+        includeFilters = @Filter(type = FilterType.REGEX, pattern = ".*Stub.*Repository"),
+        excludeFilters = @Filter(Repository.class))
+public class AppConfig {
+    // ...
+}
+
+这样会有效的禁用检验  @Component, @Repository, @Service, @Controller, @RestController, or @Configuration.
+use-default-filters="false" 是 component-scan 的属性
+
+```
+
+### 在组件中定义Bean
+```
+
+```
+
+
+### @Scope
+```
+@Scope("prototype") 
+```
+## 代理
+```
+长 scope 对 端 scope 的注入时
+
+<beans>
+    <context:component-scan base-package="org.example" scoped-proxy="interfaces"/>
+</beans>
+
+@Configuration
+@ComponentScan(basePackages = "org.example", scopedProxy = ScopedProxyMode.INTERFACES)
+public class AppConfig {
+    // ...
+}
+```
+
+### 提高移动性能
+```
+目的:提高启动性能
+原理 但可以通过在编译时创建静态候选列表来提高大型应用程序的启动性能。
+<dependencies>
+    <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-context-indexer</artifactId>
+        <version>5.3.22</version>
+        <optional>true</optional>
+    </dependency>
+</dependencies>
+
+编译时会创建 META-INF/spring.components
+
+设置JVM属性 java -Dspring.index.ignore=false 
+spring.index.ignore=false
+
+```
+
+### JSR2330 标准的支持
+```
+<dependency>
+    <groupId>javax.inject</groupId>
+    <artifactId>javax.inject</artifactId>
+    <version>1</version>
+</dependency>
+
+   
+    @Inject
+    public void setMovieFinder(MovieFinder movieFinder) {
+        this.movieFinder = movieFinder;
+    }
+
+     @Inject 和  @Autowire 使用方法一致
+.......
+``` 
+
+### 完全使用注解
+```
+ApplicationContext ctx = new AnnotationConfigApplicationContext(MyServiceImpl.class,
+ Dependency1.class, Dependency2.class);
+
+
+从 classpath com/acme 开始扫描 
+<beans>
+    <context:component-scan base-package="com.acme"/>  
+</beans> 
+
+//设置扫描区域
+AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+    ctx.scan("com.acme");
+ 
+```
+
+### @Import
+```
+和Xml里面的<import> 一样的意思导入一个配置
+
+
+
+@Configuration仅从 Spring Framework 4.3 开始支持类中的 构造函数注入
+
+
+@Configuration
+public class RepositoryConfig {
+
+    private final DataSource dataSource;
+    
+    构造参数的形式注入
+    public RepositoryConfig(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    @Bean
+    public AccountRepository accountRepository() {
+        return new JdbcAccountRepository(dataSource);
+    }
+}
+
+
+@Configuration 器形式就是BeanFactory的一个Bean
+
+
+
+注意 在注解中BeanPostProcessor和的BeanFactoryPostProcessor 通常都使用 static
+
+因为在常见BeanFactoryPostProcessor 和 BeanPostProcessor的时候都还没有进行对象的实例化的操作
+
+```
+
+### 有条件的Configuration和 Bean
+```
+@Profile
+@Bean
+
+
+annocation import xml
+@Configuration
+@ImportResource(locations = "classpath:application_ext.xml")
+
+```
+
+### 环境抽象
+```
+Environment= 文件和属性的组合
+
+
+
+@Configuration
+@Profile("development")
+
+@Configuration
+@Profile("production")
+
+
+
+设置自定义@Profile
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Profile("production")
+public @interface Production {
+}
+
+xml
+<beans profile="development"></beans>
+
+
+设置Profile方式
+1.AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+ctx.getEnvironment().setActiveProfiles("development");
+2.系统环境变量、JVM 系统属性、servlet 上下文参数来指定web.xml
+
+可以设置多个 
+ctx.getEnvironment().setActiveProfiles("profile1", "profile2");
+
+
+-Dspring.profiles.active="profile1,profile2"
+
+@Profile("default")
+注意当没有设置任何  spring.spring.active=xxx 的时候设置@Profiole是可用的
+
+默认就是 ""
+
+设置默认配置
+setDefaultProfiles()您可以使用onEnvironment或以声明方式使用spring.profiles.default属性来更改默认配置文件的名称。
+
+```
+
+### PropertySource的抽象
+```
+对于 common StandardServletEnvironment，完整的层次结构如下，最高优先级的条目位于顶部：
+
+ServletConfig 参数（如果适用——例如，在DispatcherServlet上下文的情况下）
+
+ServletContext 参数（web.xml 上下文参数条目）
+
+JNDI 环境变量（java:comp/env/条目）
+
+JVM 系统属性（-D命令行参数）
+
+JVM系统环境（操作系统环境变量）
+
+从上到下依次搜索
+
+
+添加其字节的寻找远为优先级最高
+ConfigurableApplicationContext ctx = new GenericApplicationContext();
+MutablePropertySources sources = ctx.getEnvironment().getPropertySources();
+sources.addFirst(new MyPropertySource());
+
+```
+
+### 使用PropertySources
+```
+@PropertySource("classpath:/com/myco/app.properties")
+
+通过占位符的方式来设置
+@PropertySource("classpath:/com/${my.placeholder:default/path}/app.properties")
+
 
 
 ```
