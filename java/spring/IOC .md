@@ -1165,3 +1165,156 @@ ServletRequestHandledEvent  子类添加 Servlet上下文
 
 
 ```
+
+#### 自定义事件
+```
+public class BlockedListEvent extends ApplicationEvent {
+
+    private final String address;
+    private final String content;
+
+    public BlockedListEvent(Object source, String address, String content) {
+        super(source);
+        this.address = address;
+        this.content = content;
+    }
+
+    // accessor and other methods...
+}
+```
+
+#### 事件发布器
+```
+public class EmailService implements ApplicationEventPublisherAware 
+```
+#### 注册事件
+```
+xml配置
+1.先实现接口
+public class BlockedListNotifier implements ApplicationListener<BlockedListEvent> 
+
+默认情况下会同步接收事件,意味着publishEvent() 会阻塞
+
+2.xml注册beana
+
+广播事件
+ ApplicationEventMulticaster接口和SimpleApplicationEventMulticaster 
+
+
+
+
+
+
+
+注解配置
+监听多个事件
+   @EventListener
+    public void processBlockedListEvent(BlockedListEvent event) {
+        // notify appropriate parties via notificationAddress...
+    }
+
+监听单个事件
+@EventListener({ContextStartedEvent.class, ContextRefreshedEvent.class})
+public void handleContextStart() {
+    // ...
+}
+
+
+SpEl 表达式
+
+添加条件进行事件的过滤(condition属性)
+@EventListener(condition = "#blEvent.content == 'my-event'")
+public void processBlockedListEvent(BlockedListEvent blEvent) {
+    // notify appropriate parties via notificationAddress...
+}
+Spel 可用元数据
+#root.event 或者  event   ApplicationEvent
+
+#root.args或args；args[0]访问第一个参数等 方法参数
+
+#blEvent或#a0（您也可以使用#p0或#p<#arg>参数表示法作为别名）
+  #blEvent 可能不可以使用 编译时候没有调试信息
+
+
+发布一个事件作为处理另一个事件的结果
+ @EventListener
+public ListUpdateEvent handleBlockedListEvent(BlockedListEvent event) {
+    // notify appropriate parties via notificationAddress and
+    // then publish a ListUpdateEvent...
+}
+
+作为处理ListUpdateEvent 事件的结果
+
+```
+#### 异步事件
+```
+@EventListener
+@Async
+public void processBlockedListEvent(BlockedListEvent event) {
+    // BlockedListEvent is processed in a separate thread
+}
+
+
+note:
+ 1.异步事件出现异常不会给调用者, AsyncUncaughtExceptionHandler为异步不能捕获异常处理器
+ 2. 异步事件侦听器方法不能通过返回值来发布后续事件。如果您需要发布另一个事件作为处理的结果，请 ApplicationEventPublisher 手动注入一个来发布该事件
+```
+
+#### 监听器顺序
+```
+@EventListener
+@Order(42)
+public void processBlockedListEvent(BlockedListEvent event)
+
+
+
+
+public class EntityCreatedEvent<T> extends ApplicationEvent implements ResolvableTypeProvider {
+
+    public EntityCreatedEvent(T entity) {
+        super(entity);
+    }
+   
+   // 可分解类型
+    @Override
+    public ResolvableType getResolvableType() {
+        return ResolvableType.forClassWithGenerics(getClass(), ResolvableType.forInstance(getSource()));
+    }
+}
+```
+
+### 简单的访问资源
+```
+Resource本质上是 JDKjava.net.URL类的功能更丰富的版本
+
+Resource组要用于访问静态资源
+
+```
+
+
+### ApplicationStratUp
+```
+用于applicationContext的操作步骤更新(启动步骤器)
+
+应用程序上下文生命周期（基础包扫描、配置类管理）
+bean 生命周期（实例化、智能初始化、后处理）
+应用事件处理
+
+默认ApplicationStartUp 是一个无操作变体,减少操作开
+
+
+spring提供的一个 FlightRecorderApplicationStartup
+ApplicationStartup仅在应用程序启动期间和核心容器中使用；
+
+note：在创建自定义启动步骤器 不要使用 spring.xxx 命名空间
+
+
+```
+
+
+### BeanFactory 和 ApplicationContext
+```
+BeanPostProcessor :AOP 和 Annocation 的扩展实现
+
+
+```
