@@ -1,0 +1,29 @@
+#!/bin/bash
+## Run docker
+
+case $1 in
+ 'run')
+     docker run --name=mysql_1 --restart on-failure -d  container-registry.oracle.com/mysql/community-server:5.7
+   
+  ;;
+ 'stop')
+     docker stop mysql_1
+   ;;
+  'rm')
+     docker rm mysql_1
+    ;;
+    'login')
+      docker exec -it mysql_1 mysql -uroot -p
+    ;;
+    'logs')
+      docker logs mysql_1
+    ;;
+   *) 
+    echo "invaild commond"
+   ;;
+esac   
+
+#
+
+# ## 设置用户root 用户密码
+
