@@ -24,7 +24,7 @@ IMAGE 必须指定(容器需要知道从哪里去找运行的实例)
 docker run [OPTIONS] 覆盖镜像开发者设置的默认值
 ```
 ## Operator exclusive options
-### Detached （-d）
+## Detached （-d） 后台模式
 ```
 -d=false or -d不写前置模式
 
@@ -337,5 +337,189 @@ docker-init 二进制文件由 tini支持
 
 --cpus=0.000
     cpu 的数量  0.000 表示没有限制
+
+--cpu-period=0 
+  cpu公平调度的事件周期
+
+--cpuset-cpus=""
+  设置允许执行的CPU数
+-cpuset-mems=""
+    cpu 缓存 L1 L2 L3
+
+--cpu-quota=0
+   限制CPU CFS的配额(完全公平)
+
+--cpu-rt-period=0
+ cpu real time 周期(ms微妙级)  要求不能覆盖parent
+
+--cpu-rt-runtime=0
+  限制cpu real time 运行时间  周期(ms微妙级)  要求不能覆盖parent
+
+--blkio-weight=0
+  block io weight(relative weight)  value 10-1000
+
+--blkio-weight-device="" 
+   相对设备的权重 
+   format: DEVICE_NAME:WEIGHT
+
+--device-read-bps="" 
+   limit read rate from device
+    单位 b k m g
+    format: <device-path>:<number>[<unit>]
+--device-write-bps="" 
+  limit write rate from device 
+    单位 b k m g
+    format: <device-path>:<number>[<unit>]
+
+--device-read-iops=""
+    Limit read rate (IO per second) from a device 限制读的IO 速率
+    --device-read-iops=""
+    单位 s 秒
+    format: <device-path>:<number>
+--device-write-iops=""
+    Limit 写 rate (IO per second) from a device 限制读的IO 速率
+    --device-read-iops=""
+    单位 s 秒
+    format: <device-path>:<number>
+
+--oom-kill-disable=false
+   是否 kill oom(OutofMemory) 容器 
+--oom-score-adj=0
+  Tune container’s OOM preferences (-1000 to 1000)
+
+--memory-swappiness="" 
+   内存的交换行为 , accept from 0 to 100  interger
+
+--shm-size=""
+  Size of /dev/shm (must be grater 0)
+  The format is <number><unit>
+  单位 b k m g (忽略单位默认b byte)
+  忽略大小 和单位 使用默认的 64m
+
+```
+
+## User memory constraints 用户内存限制
+```
+note 内存大小不允许超过L大小
+1.no memort limit:容器使用任意多内存
+2.-m(--memory) --memory-swap -1 不允许使用swapper
+3.-m(--memory) 但是没有设置--memory-swap  memory==memory-swap
+4.-m(--memory) --memory-swap =-m+s(--memory-swap 是总大小)
+1.docker run -it ubuntu:14.04 /bin/bash
+  没有指定内存大小意味着可以容器可以使用任意大小
+
+2.docker run -it -m 300M --memory-swap -1 ubuntu:14.04 /bin/bash
+   --memory-swap -1 禁用交换内存限制
+   -m 300M  内存限制 300M
+   如果system 支持 swap 则 会使用 300M内存和很多的交换
+
+3.docker run -it -m 300M ubuntu:14.04 /bin/bash
+  memory limit 300M
+  swap  limit 300M
+  默认虚拟内存是内存的两倍
+
+4.docker run -it -m 300M --memory-swap 1G ubuntu:14.04 /bin/bash
+   memory(300) +swap(700)=1G
+
+
+--memory-reservation 
+   若设置-m 限制在 -m (--memory)的大小设置以内
+   过没有设置 -m ,需要限制比磁盘小
+   内存遗留时 soft 限制 并不用保证不会超过or 溢出 
+   
+   大量内存争抢使用时内存会提示,内存会提示是基于内存预留分配(memeory-reservation)
   
+  docker run -it -m 500M --memory-reservation 200M ubuntu:14.04 /bin/bash
+    内存消耗 200-500 时,下一次系统回收会将内存试图回收到200以一下
+
+
+docker run -it --memory-reservation 1G ubuntu:14.04 /bin/bash
+ 内存可以使用它所需的内存,每次内存会受都会试图回收到了内存预留的大小(--memory-reservation)
+
+
+默认如果容器内存溢出错误发生 kernel 会 kill , --oom-kill-disable 会改变这一行为
+  
+
+注意 是有设置 -m(--memory) 才 使用 --oom-kill-disable=true
+ note:不是使用 -m会默认等到 所有内存耗尽耗尽 会终止系统进程释放内存
+
+docker run -it -m 100M --oom-kill-disable ubuntu:14.04 /bin/bash
+
+错误示范
+docker run -it --oom-kill-disable ubuntu:14.04 /bin/bash
+
+
+
+
+--oom-score-adj=0 [-1000,1000]
+ 容器oom 时容器被杀死的优先级
+ 越小越不容易被kill
+```
+
+## Kernel memory
+```
+内核内存和用户内存存在根本的差异
+比如 
+   内核内存没有swap out(容器的如果有过多的阻塞服务会消耗过多的内核内存)
+
+内核内存包括:
+  stack pages
+    每个进程都有自己的栈,设置 stack pages 能限制创建 进程的数量
+  slab pages
+  socket memory pressure
+  tcp memory pressure
+
+
+
+docker run -it -m 500M --kernel-memory 50M ubuntu:14.04 /bin/bash
+容器中总共使用 -m500M 内存 --kernel-memory 大小限制50M(内核黑存最高可以达到50M)
+
+docker run -it --kernel-memory 50M ubuntu:14.04 /bin/bash
+容器进程能够使用任意内存 但是 内核内存只能够使用 50M
+
+
+
+```
+
+## Swappiness constraint
+```
+默认的情况下容器的核可以换出匿名的百分比页面
+--memory-swappiness [0-100]  如果没有设置将从 parent 继承
+
+docker run -it --memory-swappiness=0 ubuntu:14.04 /bin/bash  关闭匿名也交换
+
+可以帮助容器工作集在运行时避免交换内存造成性能损失
+```
+## CPU share constraint （每个容器的运行比例）
+```
+默认情况下所有容器都获取相同的cpu比例周期
+比例通过容器的CPU 相对权重进行改变
+
+
+-c(--c-shares) default 1024 
+   如果设置 未0 系统将忽略使用默认的1024
+
+
+单核
+例 三个容器
+  c1 1024
+  c2 512
+  c3 521
+ 当接收所有CPU时间为100% 时 C1为 50%  C2 25%  C3 25%
+
+在多核cpu中 共享CPU时间被分配到多个CPU 核中
+
+多核(三核)
+C1 1024
+C2 512
+
+C1 CPU1
+C1 CPU2
+C2 CPU3
+```
+
+## CPU period constraint
+```
+默认的CFS(Completely Faily Schedule)=100ms
+ 
 ```
