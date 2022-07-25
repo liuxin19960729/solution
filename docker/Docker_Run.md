@@ -521,5 +521,36 @@ C2 CPU3
 ## CPU period constraint
 ```
 默认的CFS(Completely Faily Schedule)=100ms
- 
+
+--cpu-period  和 --cpu-quota 来限制 cpu 使用量
+
+每50ms 可以获得CPU的50%运行时间(每次调度获得总时间50ms但是被限制只能运行25ms)
+docker run -it --cpu-period=50000 --cpu-quota=25000 ubuntu:14.04 /bin/bash
+
+--cpus 通过flaot 数量指定cpu数 达到同样目的 --cpus 0.5
+
+https://www.kernel.org/doc/Documentation/scheduler/sched-bwc.txt
+```
+
+## Cpuset constraint
+```
+这样限制CPU上下文切换而消耗性能
+设置容器允许执行的CPU
+docker run -it --cpuset-cpus="1,3" ubuntu:14.04 /bin/bash 
+cpu1 和 cpu3 执行
+
+docker run -it --cpuset-cpus="0-2" ubuntu:14.04 /bin/bash
+cpu0 cpu1 cpu2 执行
+
+NUMA 系统
+docker run -it --cpuset-mems="1,3" ubuntu:14.04 /bin/bash
+docker run -it --cpuset-mems="0-2" ubuntu:14.04 /bin/bash
+
+```
+
+## CPU quota constrain
+```
+--cpu-quota  限制容器的使用
+default 0 100%的使用(1 CPU)
+
 ```
