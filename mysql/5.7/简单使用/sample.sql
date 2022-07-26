@@ -23,7 +23,8 @@ drop table pet;
 
 select * from pet;
 
+-- 删除表所有数据
+-- truncate table pet;
+insert into pet values ("cat","cat","s","f","2020-01-01",null);
 
-load data local infile '/home/liuxin/mysql_test/mysql_test_data' 
-into table pet;
-
+ delete from pet;
