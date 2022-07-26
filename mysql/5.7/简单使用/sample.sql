@@ -27,4 +27,9 @@ select * from pet;
 -- truncate table pet;
 insert into pet values ("cat","cat","s","f","2020-01-01",null);
 
- delete from pet;
+delete from pet;
+
+
+
+CREATE TABLE event (name VARCHAR(20), date DATE,
+       type VARCHAR(15), remark VARCHAR(255));
