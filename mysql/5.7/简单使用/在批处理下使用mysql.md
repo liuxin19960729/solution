@@ -28,3 +28,4 @@ mysql -t  输出交互式时的格式
 mysql> source filename;
 
 ```
+
