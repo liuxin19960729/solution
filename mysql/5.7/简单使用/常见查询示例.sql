@@ -59,3 +59,5 @@ LEFT JOIN shop s2 ON s1.article = s2.article AND s1.price < s2.price
 WHERE s2.article IS NULL
 ORDER BY s1.article;
 
+
+

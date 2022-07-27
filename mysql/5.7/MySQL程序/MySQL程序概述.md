@@ -1,2 +1,5 @@
 ## 指定程序选项
-[程序选项(option)](./invoke%20mysql%20program/%E7%A8%8B%E5%BA%8F%E9%80%89%E9%A1%B9(option).md)
+[程序选项(option)](./%E6%8C%87%E5%AE%9A%E7%A8%8B%E5%BA%8F%E9%80%89%E9%A1%B9.md)
+
+## 连接到服务器的选项
+[连接到服务器的选项](./连接到服务器的选项.md)
