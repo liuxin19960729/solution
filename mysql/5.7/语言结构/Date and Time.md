@@ -127,6 +127,21 @@ D:表示的是天 范围[0-31]
 
 没有分隔符
 'hhmmss' 格式
+   非法zhi(fro example 109712) 会被变成 00:00:00
+
+
+数字
+  ss
+  mmss
+  hhmmss
+
+
+秒的小数(只支持6位小数)
+
+'D hh:mm:ss.fraction'
+'hh:mm:ss.fraction'
+'hhmmss.fraction'
+ hhmmss.fraction 
 
 
 ```
